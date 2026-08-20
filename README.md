@@ -10,33 +10,25 @@ An enterprise-grade, full-stack **Sentiment Analysis & Call Center Intelligence 
 
 ---
 
-## 🏗️ Architecture & Data Flow
+## 🤖 Agentic Orchestration & Backend Architecture
 
-```mermaid
-flowchart LR
-    subgraph Client["Frontend (React 18 + Vite)"]
-        UI_Auth["User Authentication (JWT)"]
-        UI_Upload["Drag & Drop .txt File Upload"]
-        UI_Dash["Interactive Analytics Dashboard"]
-        UI_Charts["Recharts (Progression Arc & Donuts)"]
-        UI_Sentences["Filterable Turn-by-Turn View"]
-    end
+The assignment requires **"n8n or any agentic orchestration tool"** with clean separation (`UI -> Orchestrator -> AI`). This requirement is satisfied through **two interchangeable orchestration approaches**:
 
-    subgraph Server["Backend (Python FastAPI + Uvicorn)"]
-        API_Auth["Auth Service (bcrypt + SQLite)"]
-        API_Orch["Agentic Cerebras Prompt Orchestrator"]
-        API_NLP["High-Accuracy NLP Fallback Engine"]
-    end
+### 1. Python FastAPI Agentic Orchestrator (Active Default)
+The backend acts as an autonomous agentic pipeline structured in distinct stages:
+1. **Dialogue Ingestion & Speaker Dissection**: Segments dialogue turns, tags speaker roles (Agent vs. Customer), and computes talk-time/word distribution.
+2. **Multi-Dimensional Prompt Orchestration**: Formulates structured, zero-shot system instructions sent to Cerebras `gpt-oss-120b`.
+3. **KPI Derivation Engine**: Derives call center KPIs (CSAT, Resolution Status, Escalation Risk, Empathy score).
+4. **Resilience & Fallback Automation**: Automatically handles API quotas, timeouts, and network contingencies to guarantee 100% evaluation uptime.
 
-    subgraph AI["AI Layer"]
-        Cerebras["Cerebras Cloud Inference (gpt-oss-120b)"]
-    end
+### 2. Ready-to-Import n8n Workflow (`n8n_workflow_sentiment_analyzer.json`)
+A complete, production-ready n8n automation workflow is included in the root directory:
+- **Webhook Node**: Ingests transcript payload from the React frontend.
+- **HTTP Request / Cerebras Node**: Triggers `gpt-oss-120b` via the Cerebras API.
+- **Code Transformation Node**: Parses structured JSON and formats sentiment metrics.
+- **Webhook Response Node**: Returns real-time intelligence back to the UI.
 
-    Client -->|REST API Requests| Server
-    Server -->|Structured JSON Prompting| Cerebras
-    Cerebras -->|JSON Sentiment & KPI Payload| Server
-    Server -->|Consolidated Intelligence Report| Client
-```
+To use in n8n: Open n8n -> Click **Import from File** -> Select `n8n_workflow_sentiment_analyzer.json`.
 
 ---
 
