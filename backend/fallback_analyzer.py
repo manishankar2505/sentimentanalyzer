@@ -64,10 +64,49 @@ def validate_transcript_intelligibility(raw_text: str):
     if re.search(r'(.)\1{3,}', text):
         return False, "The input contains repetitive character patterns or keyboard spam."
 
-    # Check common English/conversation word presence
-    common_matches = sum(1 for t in tokens if t in COMMON_WORDS)
-    if common_matches == 0:
-        return False, "The text does not contain recognizable conversational language. Please provide a valid conversation transcript (e.g. Agent: ... Customer: ...)."
+    return True, ""
+
+def validate_conversation_format(raw_text: str):
+    """
+    Strictly validates that the input is formatted as a conversation transcript
+    with speaker turns (e.g. Agent: ... / Customer: ...).
+    """
+    text = raw_text.strip()
+    
+    # 1. Check intelligibility
+    is_intel, intel_err = validate_transcript_intelligibility(text)
+    if not is_intel:
+        return False, intel_err
+
+    lines = [l.strip() for l in text.split('\n') if l.strip()]
+
+    # 2. Must contain at least 2 dialogue turns
+    if len(lines) < 2:
+        return False, "Invalid Transcript Format: The text is not formatted as a conversation. Please provide at least 2 dialogue turns formatted with speaker labels (e.g., 'Agent: ...' and 'Customer: ...' on separate lines)."
+
+    # 3. Check for speaker prefixes (e.g., "Agent:", "Customer:", "Caller:", "Support:", "Name:")
+    speaker_regex = re.compile(
+        r"^(agent|customer|caller|client|rep|representative|user|support|speaker\s*\d+|person\s*\d+|[a-zA-Z0-9_\-\s]{2,20})\s*:",
+        re.IGNORECASE
+    )
+
+    speaker_lines = 0
+    detected_speakers = set()
+
+    for line in lines:
+        match = speaker_regex.match(line)
+        if match:
+            speaker_lines += 1
+            speaker_tag = match.group(1).strip().lower()
+            detected_speakers.add(speaker_tag)
+
+    speaker_ratio = speaker_lines / len(lines)
+
+    if speaker_lines < 2 or speaker_ratio < 0.35:
+        return False, "Invalid Transcript Format: The text is not in a proper conversation format. Please format the transcript with speaker labels (e.g. 'Agent: [message]' and 'Customer: [message]' on separate lines)."
+
+    if len(detected_speakers) < 2:
+        return False, "Invalid Transcript Format: A call transcript must include dialogue between at least two distinct participants (e.g. Agent and Customer)."
 
     return True, ""
 
@@ -146,7 +185,7 @@ def parse_transcript(raw_text: str):
     return sentences, agent_words, customer_words
 
 def compute_fallback_analysis(transcript_text: str):
-    is_valid, err_msg = validate_transcript_intelligibility(transcript_text)
+    is_valid, err_msg = validate_conversation_format(transcript_text)
     if not is_valid:
         return {
             "success": False,

@@ -2,7 +2,7 @@ import os
 import json
 import re
 import requests
-from fallback_analyzer import compute_fallback_analysis, validate_transcript_intelligibility
+from fallback_analyzer import compute_fallback_analysis, validate_conversation_format
 
 DEFAULT_API_KEY = os.getenv("CEREBRAS_API_KEY", "csk-45dcwn5dh492n3f489w9t9ynxf46dec9253wcvt94fxvtjjv")
 DEFAULT_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
@@ -12,10 +12,10 @@ You are an expert AI Sentiment & Customer Support Call Intelligence Analyst.
 Analyze the provided phone call conversation transcript and return a detailed, mathematically consistent JSON analysis.
 
 IMPORTANT VALIDATION RULE:
-If the input text is completely unintelligible, repetitive keyboard gibberish (e.g. asdfghjk, random numbers/symbols), or completely lacks recognizable dialogue/words, respond strictly with this JSON:
+If the input text is not in a proper conversation format (e.g. essay, article, random notes without speaker dialogue), or is unintelligible gibberish, respond strictly with this JSON:
 {
   "error": "unintelligible_input",
-  "message": "The provided text does not appear to be a valid or intelligible conversation transcript. Please provide a clear dialogue transcript."
+  "message": "Invalid Transcript Format: The provided text is not formatted as a conversation transcript. Please provide dialogue with clear speaker turns (e.g., 'Agent: ...' and 'Customer: ...' on separate lines)."
 }
 
 Otherwise, respond strictly in the following JSON format without any surrounding markdown code fences or backticks:
@@ -76,8 +76,8 @@ Otherwise, respond strictly in the following JSON format without any surrounding
 """
 
 def analyze_with_cerebras(transcript_text: str, custom_api_key: str = None, custom_model: str = None):
-    # 1. First run local intelligibility check
-    is_valid, err_msg = validate_transcript_intelligibility(transcript_text)
+    # 1. First run local strict format & intelligibility check
+    is_valid, err_msg = validate_conversation_format(transcript_text)
     if not is_valid:
         return {
             "success": False,

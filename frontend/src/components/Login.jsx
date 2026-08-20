@@ -29,7 +29,8 @@ export default function Login({ onLoginSuccess }) {
         onLoginSuccess(data.user);
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Authentication failed. Please check credentials.');
+      const errorMsg = err.response?.data?.detail || err.response?.data?.error || (isRegister ? 'Registration failed. Please check your information.' : 'Invalid email or password. Please check your credentials.');
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
