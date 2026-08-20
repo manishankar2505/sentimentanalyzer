@@ -1,0 +1,11 @@
+Agent: Thank you for calling DataPulse Solutions. My name is Rachel. How can I help you?
+Customer: Hello Rachel. I'm evaluating data analytics tools for my team of 15 members, and I have a few questions about your Enterprise plan.
+Agent: I'd be happy to give you an overview. What specific capabilities are most important for your team?
+Customer: We need real-time data sync with PostgreSQL, automated weekly email reports, and role-based access control.
+Agent: Yes, all three features are included in our Professional and Enterprise tiers. The Enterprise tier also includes a dedicated account manager and 99.99% uptime SLA.
+Customer: Okay, and what is the billing frequency? Can we pay quarterly or is it annual only?
+Agent: We support monthly, quarterly, and annual billing. Annual billing provides a 20% discount.
+Customer: Got it. Can you email me the security whitepaper and pricing sheet?
+Agent: Absolutely. I'll send that directly to your email right away.
+Customer: Thank you, Rachel. I'll review it with my team.
+Agent: You're very welcome. Feel free to reach back out if any other questions come up. Have a great day!

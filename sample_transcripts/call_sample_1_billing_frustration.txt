@@ -1,0 +1,11 @@
+Agent: Thank you for calling CloudFiber Customer Care. My name is David. How can I assist you today?
+Customer: Hi David. I am really frustrated right now. I just opened my monthly bill and I was charged an extra $45 out of nowhere!
+Agent: I completely understand your frustration, and I'm very sorry for the surprise charge. Let me pull up your account right away so we can resolve this together. May I have your account number or registered phone number?
+Customer: Sure, it is 555-0198. I always pay on auto-pay on time, so seeing this extra fee is unacceptable.
+Agent: Thank you. Looking into your billing breakdown for this cycle... I see what happened. There was an automated renewal fee for an upgraded speed tier that should have had a promotional waiver applied.
+Customer: Well, nobody told me that waiver would expire, and I never agreed to pay extra.
+Agent: You are entirely right. I have just credited the $45 charge back to your account, and I have reapplied your promotional discount for the next 12 months. Your balance is now updated to the regular $49.99.
+Customer: Oh, wow. That was fast. Thank you so much David, I really appreciate you taking care of that without giving me a hard time.
+Agent: You are very welcome! Is there anything else I can assist you with today to ensure your service is running smoothly?
+Customer: No, that was all. Thanks again and have a great afternoon!
+Agent: Thank you for choosing CloudFiber. Have a wonderful day!

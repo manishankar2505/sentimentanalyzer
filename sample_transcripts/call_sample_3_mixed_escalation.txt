@@ -1,0 +1,12 @@
+Agent: Support Center, this is Mark speaking. How can I help you today?
+Customer: Mark, my internet connection has dropped five times today while I'm trying to work from home. This is the third day in a row this has happened!
+Agent: I'm really sorry to hear that. Have you tried power cycling your modem and router?
+Customer: Yes, of course I did! I restarted it three times before calling. I need a real solution, not basic restart steps.
+Agent: Understood. Let me run a remote line diagnostic on your terminal. Please hold on for 30 seconds.
+Customer: Okay... but please hurry, I have a client meeting in fifteen minutes.
+Agent: The test shows significant signal packet loss on the neighborhood junction box. This is an external hardware issue outside your home.
+Customer: I knew it wasn't my equipment! How soon can a technician fix this? I cannot work like this.
+Agent: I am escalating this ticket with high priority (Level 2 Field Dispatch). A technician is scheduled for tomorrow morning between 8 AM and 10 AM, and I've applied a $20 service credit for the disruption. Ticket ID is #ESC-90821.
+Customer: Okay. At least someone finally identified the real issue. I'll expect the technician tomorrow morning.
+Agent: I will personally track this ticket and send you an SMS confirmation. Thank you for your patience.
+Customer: Thanks.

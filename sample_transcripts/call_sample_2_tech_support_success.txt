@@ -1,0 +1,11 @@
+Agent: Hello! Thanks for calling QuickPay Support. My name is Sarah. How may I help you?
+Customer: Hi Sarah! I'm trying to set up two-factor authentication on my mobile app, but I'm getting an error message when scanning the QR code.
+Agent: I'd be delighted to help you get that secured! Let's walk through it together. Could you verify your registered email address?
+Customer: Yes, it's alex.taylor@example.com.
+Agent: Perfect! I see your account. Let's try manual code entry instead of the QR scan. Under the QR code, do you see a 16-character alphanumeric key?
+Customer: Ah yes, I see "Key: J9X4-28KL-99P1-44B2". Let me type that into my authenticator app... Okay, it generated a 6-digit code!
+Agent: Wonderful! Now please enter that 6-digit code on your screen and click Verify.
+Customer: Done! It says "Two-factor authentication successfully enabled." That was so smooth!
+Agent: Fantastic news! Your account is now fully protected with 2FA. Anything else I can assist with?
+Customer: No, Sarah, you made that super easy and quick. Thank you so much!
+Agent: It was my absolute pleasure. Have a fabulous day!
