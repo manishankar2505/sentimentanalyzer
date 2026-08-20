@@ -45,7 +45,7 @@ export default function Login({ onLoginSuccess }) {
             <Activity className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Sentiment Analyzer</h1>
-          <p className="text-sm text-slate-500 mt-1">Full-Stack AI Call Intelligence & Insights</p>
+          <p className="text-sm text-slate-500 mt-1">conversation text analyzer and sentiment detector</p>
         </div>
 
         {/* Card */}

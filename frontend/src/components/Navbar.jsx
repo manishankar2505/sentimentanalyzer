@@ -14,11 +14,8 @@ export default function Navbar({ user, onLogout, onOpenSettings, onNewAnalysis }
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-900 text-lg tracking-tight">Sentiment Analyzer</span>
-                <span className="text-[11px] font-semibold tracking-wide bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md border border-sky-100">
-                  Full-Stack AI
-                </span>
               </div>
-              <p className="text-xs text-slate-500 hidden sm:block">Phone Call Intelligence & Sentiment KPI Engine</p>
+              <p className="text-xs text-slate-500 hidden sm:block">conversation text analyzer and sentiment detector</p>
             </div>
           </div>
 
