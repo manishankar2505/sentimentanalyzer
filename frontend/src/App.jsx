@@ -82,7 +82,8 @@ export default function App() {
       }
     } catch (err) {
       console.error('Analysis error:', err);
-      setError(err.response?.data?.error || err.message || 'Error occurred while connecting to AI backend.');
+      const errorMsg = err.response?.data?.detail || err.response?.data?.error || err.message || 'Error occurred while connecting to AI backend.';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

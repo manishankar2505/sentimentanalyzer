@@ -27,6 +27,50 @@ EMOTION_MAP = {
     'neutral': ['hello', 'hi', 'sure', 'okay', 'yes', 'account', 'verify', 'ticket', 'scheduled']
 }
 
+COMMON_WORDS = {
+    'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i',
+    'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at',
+    'this', 'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her', 'she',
+    'or', 'an', 'will', 'my', 'one', 'all', 'would', 'there', 'their',
+    'what', 'so', 'up', 'out', 'if', 'about', 'who', 'get', 'which', 'go',
+    'me', 'when', 'make', 'can', 'like', 'time', 'no', 'just', 'him', 'know',
+    'take', 'person', 'into', 'year', 'your', 'good', 'some', 'could', 'them',
+    'see', 'other', 'than', 'then', 'now', 'look', 'only', 'come', 'its', 'over',
+    'think', 'also', 'back', 'after', 'use', 'two', 'how', 'our', 'work', 'first',
+    'well', 'way', 'even', 'new', 'want', 'because', 'any', 'these', 'give', 'day',
+    'most', 'us', 'agent', 'customer', 'caller', 'client', 'support', 'help', 'hi', 'hello',
+    'please', 'thanks', 'thank', 'issue', 'problem', 'bill', 'service', 'account', 'phone', 'call'
+}
+
+def validate_transcript_intelligibility(raw_text: str):
+    """
+    Validates if the input text contains coherent dialogue vs random garbage/gibberish.
+    """
+    text = raw_text.strip()
+    if not text or len(text) < 8:
+        return False, "Input text is too short. Please provide a dialogue transcript."
+
+    # Check symbol vs letter ratio
+    alpha_chars = sum(1 for c in text if c.isalpha())
+    if (alpha_chars / len(text)) < 0.35:
+        return False, "The text contains excessive symbols or non-alphabetic characters and cannot be analyzed."
+
+    # Extract alphabetical words
+    tokens = [t.lower() for t in re.findall(r'[a-zA-Z]+', text)]
+    if len(tokens) < 3:
+        return False, "The text contains too few recognizable words to form a conversation."
+
+    # Check for excessive character repetition (e.g. aaaaa, asdfasdfasdf)
+    if re.search(r'(.)\1{3,}', text):
+        return False, "The input contains repetitive character patterns or keyboard spam."
+
+    # Check common English/conversation word presence
+    common_matches = sum(1 for t in tokens if t in COMMON_WORDS)
+    if common_matches == 0:
+        return False, "The text does not contain recognizable conversational language. Please provide a valid conversation transcript (e.g. Agent: ... Customer: ...)."
+
+    return True, ""
+
 def analyze_line_sentiment(text: str):
     lower = text.lower()
     pos_count = sum(1 for w in POSITIVE_WORDS if w in lower)
@@ -102,6 +146,14 @@ def parse_transcript(raw_text: str):
     return sentences, agent_words, customer_words
 
 def compute_fallback_analysis(transcript_text: str):
+    is_valid, err_msg = validate_transcript_intelligibility(transcript_text)
+    if not is_valid:
+        return {
+            "success": False,
+            "error": err_msg,
+            "is_unintelligible": True
+        }
+
     sentences, agent_words, customer_words = parse_transcript(transcript_text)
 
     pos_count = sum(1 for s in sentences if s["sentiment"] == "Positive")

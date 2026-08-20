@@ -144,6 +144,13 @@ async def analyze(request: Request):
         raise HTTPException(status_code=400, detail="Please provide conversation text or upload a valid .txt file")
 
     result = analyze_with_cerebras(transcript_text, target_api_key, target_model)
+    
+    if result.get("success") is False:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.get("error", "The provided text does not appear to be a readable conversation transcript. Please provide clear dialogue (e.g. Agent: ... Customer: ...).")
+        )
+
     return result
 
 @app.get("/api/health")

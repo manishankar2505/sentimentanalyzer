@@ -1,7 +1,8 @@
 import os
 import json
+import re
 import requests
-from fallback_analyzer import compute_fallback_analysis
+from fallback_analyzer import compute_fallback_analysis, validate_transcript_intelligibility
 
 DEFAULT_API_KEY = os.getenv("CEREBRAS_API_KEY", "csk-45dcwn5dh492n3f489w9t9ynxf46dec9253wcvt94fxvtjjv")
 DEFAULT_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
@@ -10,7 +11,14 @@ SYSTEM_PROMPT = """
 You are an expert AI Sentiment & Customer Support Call Intelligence Analyst.
 Analyze the provided phone call conversation transcript and return a detailed, mathematically consistent JSON analysis.
 
-Respond strictly in the following JSON format without any surrounding markdown code fences or backticks:
+IMPORTANT VALIDATION RULE:
+If the input text is completely unintelligible, repetitive keyboard gibberish (e.g. asdfghjk, random numbers/symbols), or completely lacks recognizable dialogue/words, respond strictly with this JSON:
+{
+  "error": "unintelligible_input",
+  "message": "The provided text does not appear to be a valid or intelligible conversation transcript. Please provide a clear dialogue transcript."
+}
+
+Otherwise, respond strictly in the following JSON format without any surrounding markdown code fences or backticks:
 {
   "overall": {
     "sentiment": "Positive" | "Negative" | "Neutral",
@@ -68,6 +76,15 @@ Respond strictly in the following JSON format without any surrounding markdown c
 """
 
 def analyze_with_cerebras(transcript_text: str, custom_api_key: str = None, custom_model: str = None):
+    # 1. First run local intelligibility check
+    is_valid, err_msg = validate_transcript_intelligibility(transcript_text)
+    if not is_valid:
+        return {
+            "success": False,
+            "error": err_msg,
+            "is_unintelligible": True
+        }
+
     api_key = custom_api_key or DEFAULT_API_KEY
     model = custom_model or DEFAULT_MODEL
 
@@ -96,21 +113,29 @@ def analyze_with_cerebras(transcript_text: str, custom_api_key: str = None, cust
                 content = re.sub(r"^```(json)?\n?", "", content)
                 content = re.sub(r"\n?```$", "", content).strip()
             data = json.loads(content)
+
+            # Check if LLM detected unintelligible input
+            if "error" in data and data["error"] == "unintelligible_input":
+                return {
+                    "success": False,
+                    "error": data.get("message", "The provided text is unintelligible or not a valid conversation transcript."),
+                    "is_unintelligible": True
+                }
+
             data["source"] = f"cerebras-{model}"
             return {"success": True, "data": data, "fallback": False}
         else:
             status = resp.status_code
             print(f"Cerebras API returned status {status}. Triggering built-in fallback NLP analyzer.")
-            fallback_data = compute_fallback_analysis(transcript_text)
-            fallback_data["apiWarning"] = (
-                "Cerebras API Quota Reached (HTTP 402) - Used Built-in High-Accuracy Python NLP Engine. You can update your API key in Settings."
-                if status == 402 else
-                f"Cerebras API Notice (HTTP {status}) - Used Built-in Python NLP Engine."
-            )
-            return {"success": True, "data": fallback_data, "fallback": True}
+            fallback_res = compute_fallback_analysis(transcript_text)
+            if fallback_res.get("success") is False:
+                return fallback_res
+
+            return {"success": True, "data": fallback_res, "fallback": True}
 
     except Exception as e:
         print(f"Exception during Cerebras call: {e}. Using fallback analyzer.")
-        fallback_data = compute_fallback_analysis(transcript_text)
-        fallback_data["apiWarning"] = f"Cerebras Connection Notice ({str(e)}). Used Built-in Python NLP Engine."
-        return {"success": True, "data": fallback_data, "fallback": True}
+        fallback_res = compute_fallback_analysis(transcript_text)
+        if fallback_res.get("success") is False:
+            return fallback_res
+        return {"success": True, "data": fallback_res, "fallback": True}
