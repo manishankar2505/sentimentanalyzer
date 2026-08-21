@@ -2,11 +2,8 @@ import sqlite3
 import os
 import tempfile
 import bcrypt
-import requests
-import json
 from datetime import datetime
 
-# Pre-seeded existing accounts created across all previous sessions
 PRESEEDED_USERS = [
     {"name": "yash", "email": "yash@gmail.com", "created_at": "2026-08-21 10:32:00"},
     {"name": "Yash", "email": "yash123@gmail.com", "created_at": "2026-08-20 16:22:46"},
@@ -65,8 +62,6 @@ def init_db():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
-    # Pre-seed default accounts
     default_hash = hash_password("password123")
     for u in PRESEEDED_USERS:
         cursor.execute(
@@ -75,7 +70,6 @@ def init_db():
         )
     conn.commit()
     conn.close()
-    print(f"SQLite database initialized at {DB_PATH}")
 
 def create_user(name: str, email: str, password: str):
     conn = get_db()
@@ -106,7 +100,6 @@ def find_user_by_email(email: str):
     if row:
         return dict(row)
 
-    # Check preseeded
     for u in PRESEEDED_USERS:
         if u["email"].lower().strip() == clean_email:
             default_hash = hash_password("password123")
@@ -136,10 +129,22 @@ def get_all_users():
     """
     Returns all registered accounts in the system.
     """
-    init_db() # Ensures all pre-seeded accounts and registered users are in SQLite
+    init_db()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT id, name, email, created_at FROM users ORDER BY id DESC")
-    rows = cursor.fetchall()
+    rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
-    return [dict(r) for r in rows]
+    
+    existing_emails = {r["email"].lower().strip() for r in rows}
+    for u in PRESEEDED_USERS:
+        if u["email"].lower().strip() not in existing_emails:
+            rows.append({
+                "id": len(rows) + 1,
+                "name": u["name"],
+                "email": u["email"].lower().strip(),
+                "created_at": u["created_at"]
+            })
+            existing_emails.add(u["email"].lower().strip())
+            
+    return rows
