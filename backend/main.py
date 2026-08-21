@@ -179,13 +179,8 @@ def database_viewer_html():
     Visual web UI to navigate and inspect database contents live in the browser.
     """
     try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, email, created_at FROM users ORDER BY id DESC;")
-        users = cursor.fetchall()
-        
+        users = get_all_users()
         db_size = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
-        conn.close()
 
         user_rows = ""
         for u in users:
