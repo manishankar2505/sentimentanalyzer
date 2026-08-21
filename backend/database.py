@@ -1,14 +1,38 @@
 import sqlite3
 import os
+import tempfile
 import bcrypt
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "sentiment_app.db")
+def get_db_path():
+    # In Vercel / AWS Lambda Serverless environments, /var/task is read-only.
+    # Writable files must be stored in /tmp.
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return os.path.join(tempfile.gettempdir(), "sentiment_app.db")
+    
+    local_path = os.path.join(os.path.dirname(__file__), "sentiment_app.db")
+    try:
+        test_file = os.path.join(os.path.dirname(__file__), ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return local_path
+    except Exception:
+        return os.path.join(tempfile.gettempdir(), "sentiment_app.db")
+
+DB_PATH = get_db_path()
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    global DB_PATH
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.OperationalError:
+        DB_PATH = os.path.join(tempfile.gettempdir(), "sentiment_app.db")
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 def init_db():
     conn = get_db()
@@ -66,3 +90,11 @@ def find_user_by_id(user_id: int):
     if row:
         return dict(row)
     return None
+
+def get_all_users():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, email, created_at FROM users ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

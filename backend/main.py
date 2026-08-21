@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from dotenv import load_dotenv
 
-from database import init_db, create_user, find_user_by_email, find_user_by_id, verify_password
+from database import init_db, create_user, find_user_by_email, find_user_by_id, verify_password, get_all_users
 from cerebras_client import analyze_with_cerebras
 
 load_dotenv()
@@ -108,6 +108,17 @@ def login(req: LoginRequest):
 @app.get("/api/auth/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     return {"user": current_user}
+
+@app.get("/api/admin/users")
+def get_registered_users():
+    """
+    View all registered accounts (id, name, email, created_at).
+    """
+    users = get_all_users()
+    return {
+        "total_users": len(users),
+        "users": users
+    }
 
 from fastapi import Request
 
