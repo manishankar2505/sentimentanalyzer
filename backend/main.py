@@ -148,6 +148,146 @@ def inspect_tmp_directory():
         "files": files_list
     }
 
+from fastapi.responses import HTMLResponse
+import sqlite3
+from database import get_db, DB_PATH
+
+@app.get("/api/admin/db-inspect")
+def inspect_db_json():
+    """
+    Returns full database schema and all table contents in JSON.
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = [t[0] for t in cursor.fetchall() if t[0] != "sqlite_sequence"]
+        
+        result = {"db_path": DB_PATH, "tables": {}}
+        for t in tables:
+            cursor.execute(f"SELECT * FROM {t}")
+            rows = cursor.fetchall()
+            result["tables"][t] = [dict(r) for r in rows]
+        conn.close()
+        return result
+    except Exception as e:
+        return {"error": str(e), "db_path": DB_PATH}
+
+@app.get("/api/admin/db-viewer", response_class=HTMLResponse)
+def database_viewer_html():
+    """
+    Visual web UI to navigate and inspect database contents live in the browser.
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, email, created_at FROM users ORDER BY id DESC;")
+        users = cursor.fetchall()
+        
+        db_size = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
+        conn.close()
+
+        user_rows = ""
+        for u in users:
+            user_rows += f"""
+            <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                <td class="py-3 px-4 font-mono font-bold text-slate-700">#{u['id']}</td>
+                <td class="py-3 px-4 font-medium text-slate-900">{u['name']}</td>
+                <td class="py-3 px-4 text-sky-600 font-mono">{u['email']}</td>
+                <td class="py-3 px-4 text-slate-500 text-sm">{u['created_at']}</td>
+                <td class="py-3 px-4">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Active Account
+                    </span>
+                </td>
+            </tr>
+            """
+
+        if not user_rows:
+            user_rows = '<tr><td colspan="5" class="py-8 text-center text-slate-400">No users registered yet in this instance.</td></tr>'
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>SQLite Database Viewer — Sentiment Analyzer</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <style>body {{ font-family: 'Inter', sans-serif; }}</style>
+        </head>
+        <body class="bg-slate-100 min-h-screen py-10 px-4">
+            <div class="max-w-5xl mx-auto space-y-6">
+                <!-- Header -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="p-2 bg-sky-50 text-sky-600 rounded-xl font-bold">🗄️</span>
+                            <h1 class="text-xl font-bold text-slate-900">SQLite Cloud Database Inspector</h1>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">Live database browser running on Vercel Serverless</p>
+                    </div>
+                    <a href="/api/admin/db-viewer" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow transition-all">
+                        🔄 Refresh Live DB
+                    </a>
+                </div>
+
+                <!-- Database Metadata Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs text-slate-500 font-medium">Database File Path</span>
+                        <div class="text-sm font-mono font-bold text-slate-800 mt-1 truncate" title="{DB_PATH}">{DB_PATH}</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs text-slate-500 font-medium">Database Size</span>
+                        <div class="text-sm font-mono font-bold text-slate-800 mt-1">{db_size:,} bytes (16 KB)</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-xs text-slate-500 font-medium">Registered User Count</span>
+                        <div class="text-sm font-bold text-emerald-600 mt-1">{len(users)} User Accounts</div>
+                    </div>
+                </div>
+
+                <!-- Table Content -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-sky-500"></span>
+                            <h2 class="text-sm font-bold text-slate-800">Table: <code class="text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">users</code></h2>
+                        </div>
+                        <a href="/api/admin/db-inspect" target="_blank" class="text-xs text-sky-600 hover:text-sky-700 font-medium">View Raw JSON ↗</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                                <tr>
+                                    <th class="py-3 px-4">ID</th>
+                                    <th class="py-3 px-4">Full Name</th>
+                                    <th class="py-3 px-4">Email Address</th>
+                                    <th class="py-3 px-4">Registration Date</th>
+                                    <th class="py-3 px-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {user_rows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Quick Navigation Links -->
+                <div class="flex items-center justify-between text-xs text-slate-500 px-2">
+                    <a href="https://sentimentanalyzer-xi.vercel.app" class="hover:text-slate-900">← Back to Sentiment Analyzer App</a>
+                    <a href="/api/admin/debug-tmp" class="hover:text-slate-900">View /tmp Directory Files →</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return html_content
+    except Exception as e:
+        return f"<h1>Error loading database:</h1><p>{str(e)}</p>"
+
 from fastapi import Request
 
 # --- ANALYSIS ROUTE ---
