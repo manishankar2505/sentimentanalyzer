@@ -38,3 +38,7 @@ yarn-error.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Local PDF files and scripts
+*.pdf
+generate_pdf.py
