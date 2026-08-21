@@ -11,14 +11,63 @@ An enterprise-ready **Conversation Intelligence & Sentiment Analysis Platform** 
 
 ---
 
-## 🏗️ Simple Architecture
+## 🏗️ System Architecture & Execution Flow
 
 ```mermaid
-flowchart LR
-    A["🖥️ Frontend (React + Vite)\n- File Upload & Text Area\n- Visual KPI Cards\n- Sentiment Progression Arc\n- Turn-by-Turn Chat Breakdown"] 
-    -->|REST API / JSON| B["⚙️ Backend Orchestrator (FastAPI)\n- Dialogue Segmentation\n- Format & Intelligibility Validation\n- Call Center KPI Calculation Engine\n- Fallback NLP Resilience"]
-    -->|Structured Prompt| C["🧠 AI Model (Cerebras)\n- gpt-oss-120b LLM\n- Sentiment & Emotion Extraction\n- Sentence Reasoning"]
+flowchart TD
+    subgraph S1["1. User Ingestion (Frontend UI)"]
+        A["User uploads .txt transcript or pastes dialogue into text editor"]
+    end
+
+    subgraph S2["2. API Dispatch (REST API)"]
+        B["React dispatches authenticated POST /api/analyze request"]
+    end
+
+    subgraph S3["3. Orchestration & Validation (FastAPI)"]
+        C["• Guardrail Validation: Rejects gibberish & non-dialogue text\n• Dialogue Dissection: Segments multi-speaker turns\n• Metrics Pre-computation: Calculates talk-time % per speaker"]
+    end
+
+    subgraph S4["4. AI Reasoning & Extraction (Cerebras LLM)"]
+        D["• Structured JSON Prompting sent to Cerebras gpt-oss-120b\n• LLM extracts Sentiment, CSAT, Emotions & Turn-by-Turn Reasoning\n• Zero-Downtime Heuristic Fallback Engine ensures 100% uptime"]
+    end
+
+    subgraph S5["5. Dashboard Visualization (Frontend UI)"]
+        E["• KPI Cards: Full Call Summary, CSAT 1-5, Talk Share Bars\n• Charts: Sentiment Progression Arc (X: Turns, Y: Polarity)\n• Chat View: Filterable turn-by-turn sentences with AI drawer"]
+    end
+
+    S1 --> S2 --> S3 --> S4 --> S5
 ```
+
+---
+
+## 🔄 Detailed Step-by-Step Flow (What Happens & What is Done)
+
+### Step 1: User Ingestion (`Frontend Layer`)
+- The user uploads a customer support `.txt` file or pastes raw dialogue directly into the plain-text editor.
+- The interface features live word and line counters with drag-and-drop support.
+
+### Step 2: Request Dispatch (`REST API`)
+- The frontend packages the transcript payload and sends an authenticated `POST /api/analyze` request to the Python FastAPI backend with JWT authorization.
+
+### Step 3: Input Validation & Dialogue Segmentation (`FastAPI Orchestrator`)
+- **Guardrail Check**: The orchestrator verifies that the input contains readable conversational language and rejects random keyboard mashing, symbol noise, plain articles, or single-speaker monologues with friendly error feedback.
+- **Multi-Speaker Segmentation**: Intelligently parses dialogue turns for 2+ participants (e.g., `Agent (Alex)`, `Customer 1 (Jane)`, `Customer 2 (Tom)`), whether on separate lines or inline in a continuous block.
+- **Speaker Metrics Computation**: Computes exact word counts, dialogue turn counts, and percentage talk-share for every participant.
+
+### Step 4: AI Sentiment & KPI Extraction (`Cerebras gpt-oss-120b`)
+- The backend sends a zero-shot, structured prompt to **Cerebras AI (`gpt-oss-120b`)** enforcing a strict JSON schema.
+- The model analyzes the conversational arc and extracts:
+  - **Overall Polarity**: Positive, Negative, or Neutral with confidence percentage.
+  - **Call Center KPIs**: CSAT rating (1.0 to 5.0), Resolution Status, Escalation Risk, and Agent Empathy rating.
+  - **Executive Call Summary**: Unclipped overview of caller concerns, agent handling, and resolution.
+  - **Turn-by-Turn Sentence Analysis**: Sentiment polarity score, discrete emotion classification (Satisfaction, Frustration, Relief, Anger, Confusion, Joy), and explicit 1-sentence reasoning for every line.
+- **Resilience Fallback**: If cloud API limits are encountered, the built-in heuristic NLP analyzer executes seamlessly with zero downtime.
+
+### Step 5: Dashboard Visualization (`React + Recharts Layer`)
+- The frontend receives the structured intelligence payload and renders the interactive dashboard:
+  - **Executive KPI Cards**: Displays overall sentiment, complete untruncated Call Summary, color-coded speaker talk-share bars, and CSAT rating.
+  - **Sentiment Progression Arc**: Visualizes the emotional journey of the conversation on an interactive area chart (X-axis: Turn sequence, Y-axis: Polarity score).
+  - **Sentence Breakdown**: Interactive chat list where users can filter turns by speaker or emotion and expand AI explanations.
 
 ---
 
