@@ -120,6 +120,34 @@ def get_registered_users():
         "users": users
     }
 
+@app.get("/api/admin/debug-tmp")
+def inspect_tmp_directory():
+    """
+    Inspect files inside the serverless /tmp directory.
+    """
+    import tempfile
+    tmp_dir = tempfile.gettempdir()
+    files_list = []
+    
+    try:
+        for f in os.listdir(tmp_dir):
+            file_path = os.path.join(tmp_dir, f)
+            stat = os.stat(file_path)
+            files_list.append({
+                "filename": f,
+                "size_bytes": stat.st_size,
+                "path": file_path,
+                "is_file": os.path.isfile(file_path)
+            })
+    except Exception as e:
+        files_list = [{"error": str(e)}]
+        
+    return {
+        "temp_directory_path": tmp_dir,
+        "total_files": len(files_list),
+        "files": files_list
+    }
+
 from fastapi import Request
 
 # --- ANALYSIS ROUTE ---
