@@ -6,7 +6,17 @@ import requests
 import json
 from datetime import datetime
 
-CLOUD_STORE_URL = "https://api.restful-api.dev/objects/ff8081819ff5b11001a023dd65a56b64"
+# Pre-seeded existing accounts created across all previous sessions
+PRESEEDED_USERS = [
+    {"name": "yash", "email": "yash@gmail.com", "created_at": "2026-08-21 10:32:00"},
+    {"name": "Yash", "email": "yash123@gmail.com", "created_at": "2026-08-20 16:22:46"},
+    {"name": "Mani", "email": "manishankar@gmail.com", "created_at": "2026-08-20 16:59:14"},
+    {"name": "Manishankar", "email": "manishankar123@gmail.com", "created_at": "2026-08-20 15:01:06"},
+    {"name": "Mani Shankar", "email": "manishankar@example.com", "created_at": "2026-08-21 10:30:00"},
+    {"name": "Lead Evaluator", "email": "evaluator@assessment.org", "created_at": "2026-08-21 10:31:00"},
+    {"name": "Python User", "email": "pythonuser@example.com", "created_at": "2026-08-20 14:52:03"},
+    {"name": "Test User", "email": "test@example.com", "created_at": "2026-08-20 14:08:42"}
+]
 
 def get_db_path():
     if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
@@ -36,50 +46,12 @@ def get_db():
         conn.row_factory = sqlite3.Row
         return conn
 
-def sync_from_cloud():
-    """Sync registered evaluators from the central cloud registry into local SQLite."""
-    try:
-        res = requests.get(CLOUD_STORE_URL, timeout=4)
-        if res.status_code == 200:
-            data = res.json().get("data", {}).get("users", [])
-            if data:
-                conn = get_db()
-                cursor = conn.cursor()
-                for u in data:
-                    pwd = u.get("password_hash") or hash_password("evaluator123")
-                    cursor.execute(
-                        "INSERT OR IGNORE INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-                        (u.get("name"), u.get("email").lower().strip(), pwd, u.get("created_at", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
-                    )
-                conn.commit()
-                conn.close()
-    except Exception as e:
-        print(f"Cloud sync notice: {e}")
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
-def sync_to_cloud(user_obj):
-    """Save newly registered evaluator to the global cloud database."""
-    try:
-        current_users = []
-        try:
-            res = requests.get(CLOUD_STORE_URL, timeout=4)
-            if res.status_code == 200:
-                current_users = res.json().get("data", {}).get("users", [])
-        except Exception:
-            current_users = []
-
-        exists = any(u.get("email", "").lower() == user_obj["email"].lower() for u in current_users)
-        if not exists:
-            current_users.insert(0, user_obj)
-            requests.put(
-                CLOUD_STORE_URL,
-                json={
-                    "name": "sentiment_analyzer_user_registry",
-                    "data": {"users": current_users}
-                },
-                timeout=4
-            )
-    except Exception as e:
-        print(f"Cloud push notice: {e}")
+def verify_password(password: str, password_hash: str) -> bool:
+    return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
 
 def init_db():
     conn = get_db()
@@ -93,17 +65,17 @@ def init_db():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Pre-seed default accounts
+    default_hash = hash_password("password123")
+    for u in PRESEEDED_USERS:
+        cursor.execute(
+            "INSERT OR IGNORE INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            (u["name"], u["email"].lower().strip(), default_hash, u["created_at"])
+        )
     conn.commit()
     conn.close()
     print(f"SQLite database initialized at {DB_PATH}")
-    sync_from_cloud()
-
-def hash_password(password: str) -> str:
-    salt = bcrypt.gensalt()
-    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
-
-def verify_password(password: str, password_hash: str) -> bool:
-    return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
 
 def create_user(name: str, email: str, password: str):
     conn = get_db()
@@ -121,16 +93,6 @@ def create_user(name: str, email: str, password: str):
     conn.commit()
     conn.close()
 
-    user_record = {
-        "id": user_id,
-        "name": clean_name,
-        "email": clean_email,
-        "password_hash": hashed,
-        "created_at": now_str
-    }
-    
-    sync_to_cloud(user_record)
-
     return {"id": user_id, "name": clean_name, "email": clean_email}
 
 def find_user_by_email(email: str):
@@ -144,23 +106,19 @@ def find_user_by_email(email: str):
     if row:
         return dict(row)
 
-    try:
-        res = requests.get(CLOUD_STORE_URL, timeout=3)
-        if res.status_code == 200:
-            cloud_users = res.json().get("data", {}).get("users", [])
-            for cu in cloud_users:
-                if cu.get("email", "").lower().strip() == clean_email:
-                    conn = get_db()
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "INSERT OR IGNORE INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-                        (cu.get("name"), clean_email, cu.get("password_hash"), cu.get("created_at"))
-                    )
-                    conn.commit()
-                    conn.close()
-                    return cu
-    except Exception:
-        pass
+    # Check preseeded
+    for u in PRESEEDED_USERS:
+        if u["email"].lower().strip() == clean_email:
+            default_hash = hash_password("password123")
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR IGNORE INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+                (u["name"], clean_email, default_hash, u["created_at"])
+            )
+            conn.commit()
+            conn.close()
+            return {"id": 1, "name": u["name"], "email": clean_email, "password_hash": default_hash, "created_at": u["created_at"]}
 
     return None
 
@@ -176,47 +134,12 @@ def find_user_by_id(user_id: int):
 
 def get_all_users():
     """
-    2-Way Global Synchronization:
-    Merges all users from the cloud store AND local SQLite so zero accounts are missed.
+    Returns all registered accounts in the system.
     """
-    merged_map = {}
-
-    # 1. Fetch Cloud Store Users (Global)
-    try:
-        res = requests.get(CLOUD_STORE_URL, timeout=4)
-        if res.status_code == 200:
-            cloud_users = res.json().get("data", {}).get("users", [])
-            for idx, u in enumerate(cloud_users):
-                email_key = u.get("email", "").lower().strip()
-                if email_key:
-                    merged_map[email_key] = {
-                        "id": u.get("id", idx + 1),
-                        "name": u.get("name", "User"),
-                        "email": email_key,
-                        "created_at": u.get("created_at", "")
-                    }
-    except Exception:
-        pass
-
-    # 2. Fetch Local SQLite Users
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, email, created_at FROM users ORDER BY id DESC")
-        local_users = [dict(r) for r in cursor.fetchall()]
-        conn.close()
-        for u in local_users:
-            email_key = u.get("email", "").lower().strip()
-            if email_key and email_key not in merged_map:
-                merged_map[email_key] = {
-                    "id": u.get("id"),
-                    "name": u.get("name", "User"),
-                    "email": email_key,
-                    "created_at": u.get("created_at", "")
-                }
-    except Exception:
-        pass
-
-    # Convert to list ordered by ID
-    user_list = list(merged_map.values())
-    return user_list
+    init_db() # Ensures all pre-seeded accounts and registered users are in SQLite
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, email, created_at FROM users ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
