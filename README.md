@@ -10,25 +10,40 @@ An enterprise-grade, full-stack **Sentiment Analysis & Call Center Intelligence 
 
 ---
 
-## 🤖 Agentic Orchestration & Backend Architecture
+## 🤖 Python Agentic Orchestration Architecture
 
-The assignment requires **"n8n or any agentic orchestration tool"** with clean separation (`UI -> Orchestrator -> AI`). This requirement is satisfied through **two interchangeable orchestration approaches**:
+The system implements a multi-stage **Agentic Orchestrator** in Python FastAPI with clean separation (`React UI ➔ FastAPI Agentic Pipeline ➔ Cerebras LLM / Fallback Engine`):
 
-### 1. Python FastAPI Agentic Orchestrator (Active Default)
-The backend acts as an autonomous agentic pipeline structured in distinct stages:
-1. **Dialogue Ingestion & Speaker Dissection**: Segments dialogue turns, tags speaker roles (Agent vs. Customer), and computes talk-time/word distribution.
-2. **Multi-Dimensional Prompt Orchestration**: Formulates structured, zero-shot system instructions sent to Cerebras `gpt-oss-120b`.
-3. **KPI Derivation Engine**: Derives call center KPIs (CSAT, Resolution Status, Escalation Risk, Empathy score).
-4. **Resilience & Fallback Automation**: Automatically handles API quotas, timeouts, and network contingencies to guarantee 100% evaluation uptime.
+```mermaid
+flowchart LR
+    subgraph Frontend["Frontend Layer (React 18 + Vite)"]
+        UI_Auth["User Authentication (JWT)"]
+        UI_Upload["Transcript Ingestion & Text Editor"]
+        UI_Dash["Interactive KPI & Visual Dashboard"]
+    end
 
-### 2. Ready-to-Import n8n Workflow (`n8n_workflow_sentiment_analyzer.json`)
-A complete, production-ready n8n automation workflow is included in the root directory:
-- **Webhook Node**: Ingests transcript payload from the React frontend.
-- **HTTP Request / Cerebras Node**: Triggers `gpt-oss-120b` via the Cerebras API.
-- **Code Transformation Node**: Parses structured JSON and formats sentiment metrics.
-- **Webhook Response Node**: Returns real-time intelligence back to the UI.
+    subgraph Orchestrator["Agentic Orchestration Layer (Python FastAPI)"]
+        Agent_Parser["1. Multi-Speaker Turn Dissection"]
+        Agent_Prompt["2. Structured LLM Prompt Orchestrator"]
+        Agent_KPI["3. Call Center KPI Derivation Engine"]
+        Agent_Resilience["4. Intelligent Fallback & Validation"]
+    end
 
-To use in n8n: Open n8n -> Click **Import from File** -> Select `n8n_workflow_sentiment_analyzer.json`.
+    subgraph AI["AI Layer"]
+        Cerebras["Cerebras Cloud Inference (gpt-oss-120b)"]
+    end
+
+    Frontend -->|REST API Requests| Orchestrator
+    Orchestrator -->|Zero-Shot Structured JSON Prompt| Cerebras
+    Cerebras -->|Sentiment & KPI Payload| Orchestrator
+    Orchestrator -->|Consolidated Intelligence Report| Frontend
+```
+
+### Key Stages of the Agentic Pipeline:
+1. **Intelligent Speaker Dissection**: Autonomously segments multi-party dialogue (e.g., `Agent (Alex)`, `Customer 1 (Jane)`, `Customer 2 (Tom)`), detects speaker turns, and calculates talk-time distributions.
+2. **Multi-Dimensional Prompt Orchestrator**: Interacts with Cerebras `gpt-oss-120b` via structured JSON schemas to extract polarity, discrete emotions, and step-by-step reasoning.
+3. **KPI Derivation Engine**: Derives CSAT ratings (1–5 scale), Resolution Status, Escalation Risk, and Agent Empathy ratings.
+4. **Resilience & Fallback Automation**: Provides self-healing fallback analysis ensuring 100% evaluation uptime regardless of API quota limits.
 
 ---
 
