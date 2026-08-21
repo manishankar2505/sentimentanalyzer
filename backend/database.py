@@ -59,7 +59,6 @@ def sync_from_cloud():
 def sync_to_cloud(user_obj):
     """Save newly registered evaluator to the global cloud database."""
     try:
-        # Fetch current users
         current_users = []
         try:
             res = requests.get(CLOUD_STORE_URL, timeout=4)
@@ -68,7 +67,6 @@ def sync_to_cloud(user_obj):
         except Exception:
             current_users = []
 
-        # Check if already exists in list
         exists = any(u.get("email", "").lower() == user_obj["email"].lower() for u in current_users)
         if not exists:
             current_users.insert(0, user_obj)
@@ -131,7 +129,6 @@ def create_user(name: str, email: str, password: str):
         "created_at": now_str
     }
     
-    # Broadcast to central cloud store
     sync_to_cloud(user_record)
 
     return {"id": user_id, "name": clean_name, "email": clean_email}
@@ -147,14 +144,12 @@ def find_user_by_email(email: str):
     if row:
         return dict(row)
 
-    # If not found in local SQLite container, check central cloud store
     try:
         res = requests.get(CLOUD_STORE_URL, timeout=3)
         if res.status_code == 200:
             cloud_users = res.json().get("data", {}).get("users", [])
             for cu in cloud_users:
                 if cu.get("email", "").lower().strip() == clean_email:
-                    # Cache into local SQLite
                     conn = get_db()
                     cursor = conn.cursor()
                     cursor.execute(
@@ -180,29 +175,48 @@ def find_user_by_id(user_id: int):
     return None
 
 def get_all_users():
-    # 1. Fetch from central cloud store for 100% global coverage
+    """
+    2-Way Global Synchronization:
+    Merges all users from the cloud store AND local SQLite so zero accounts are missed.
+    """
+    merged_map = {}
+
+    # 1. Fetch Cloud Store Users (Global)
     try:
         res = requests.get(CLOUD_STORE_URL, timeout=4)
         if res.status_code == 200:
             cloud_users = res.json().get("data", {}).get("users", [])
-            if cloud_users:
-                # Sanitize password_hash out of user list
-                clean_list = []
-                for idx, u in enumerate(cloud_users):
-                    clean_list.append({
+            for idx, u in enumerate(cloud_users):
+                email_key = u.get("email", "").lower().strip()
+                if email_key:
+                    merged_map[email_key] = {
                         "id": u.get("id", idx + 1),
                         "name": u.get("name", "User"),
-                        "email": u.get("email", ""),
+                        "email": email_key,
                         "created_at": u.get("created_at", "")
-                    })
-                return clean_list
+                    }
     except Exception:
         pass
 
-    # Fallback to local SQLite if cloud is unreachable
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, email, created_at FROM users ORDER BY id DESC")
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    # 2. Fetch Local SQLite Users
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, email, created_at FROM users ORDER BY id DESC")
+        local_users = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        for u in local_users:
+            email_key = u.get("email", "").lower().strip()
+            if email_key and email_key not in merged_map:
+                merged_map[email_key] = {
+                    "id": u.get("id"),
+                    "name": u.get("name", "User"),
+                    "email": email_key,
+                    "created_at": u.get("created_at", "")
+                }
+    except Exception:
+        pass
+
+    # Convert to list ordered by ID
+    user_list = list(merged_map.values())
+    return user_list
